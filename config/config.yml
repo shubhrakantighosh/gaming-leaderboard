@@ -1,0 +1,30 @@
+server:
+  port: ":8081"
+
+service:
+  name: "gaming-leaderboard"
+
+newrelic:
+  enabled: true
+  licenseKey: "a7964642a12c5a08686a7f80bb12a193FFFFNRAL"
+
+postgresql:
+  debugMode: true
+  database: "crud"
+  maxOpenConns: 10
+  maxIdleConns: 2
+  master:
+    host: "127.0.0.1"
+    port: "5433"
+    username: "admin"
+    password: "admin"
+  slaves:
+    hosts: "127.0.0.1"
+    port: "5433"
+    username: "admin"
+    password: "admin"
+
+redis:
+  host     : "127.0.0.1:7005"
+  db       : 0
+  poolSize : 1000    

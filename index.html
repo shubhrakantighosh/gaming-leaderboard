@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gaming Leaderboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+    }
+
+    header {
+      background: #333;
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 30px;
+    }
+
+    .section {
+      background: #f9f9f9;
+      padding: 20px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .section h2 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 1.5em;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 1em;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #764ba2;
+    }
+
+    .output-section {
+      grid-column: 1 / -1;
+      background: #f9f9f9;
+      padding: 20px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .output-section h2 {
+      color: #333;
+      margin-bottom: 15px;
+    }
+
+    pre {
+      background: #2d2d2d;
+      color: #f8f8f2;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      max-height: 500px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+    }
+
+    .error {
+      color: #d32f2f;
+      padding: 10px;
+      background: #ffebee;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+
+    .success {
+      color: #388e3c;
+      padding: 10px;
+      background: #e8f5e9;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+
+    .loading {
+      text-align: center;
+      color: #667eea;
+      font-weight: bold;
+    }
+
+    @media (max-width: 768px) {
+      .content {
+        grid-template-columns: 1fr;
+      }
+
+      header h1 {
+        font-size: 1.8em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎮 Gaming Leaderboard</h1>
+      <p>Track your scores and climb the rankings</p>
+    </header>
+
+    <div class="content">
+      <div class="section">
+        <h2>📤 Submit Score</h2>
+        <input type="number" id="userId" placeholder="User ID" min="1" />
+        <input type="number" id="score" placeholder="Score" min="1" />
+        <button onclick="submitScore()">Submit Score</button>
+      </div>
+
+      <div class="section">
+        <h2>👑 Top Leaderboard</h2>
+        <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">
+          Fetch the top 10 players
+        </p>
+        <button onclick="getTop()">Fetch Top 10</button>
+      </div>
+
+      <div class="section">
+        <h2>🔍 Get User Rank</h2>
+        <input type="number" id="rankUserId" placeholder="User ID" min="1" />
+        <button onclick="getRank()">Get Rank</button>
+      </div>
+
+      <div class="section">
+        <h2>⚙️ Advanced</h2>
+        <button onclick="clearOutput()">Clear Output</button>
+        <button onclick="testConnection()" style="background: #ff9800; margin-top: 10px;">
+          Test Connection
+        </button>
+      </div>
+
+      <div class="output-section">
+        <h2>📊 Response</h2>
+        <div id="statusMessage"></div>
+        <pre id="output">Waiting for response...</pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "http://localhost:8081/api/v1/leaderboard";
+
+    function showLoading() {
+      document.getElementById("output").innerHTML = '<div class="loading">Loading...</div>';
+      document.getElementById("statusMessage").innerHTML = '';
+    }
+
+    function showOutput(data, isError = false) {
+      const statusDiv = document.getElementById("statusMessage");
+      
+      if (isError) {
+        statusDiv.innerHTML = `<div class="error">❌ Error: ${data}</div>`;
+        document.getElementById("output").textContent = data;
+      } else {
+        statusDiv.innerHTML = '<div class="success">✅ Success</div>';
+        document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+      }
+    }
+
+    function clearOutput() {
+      document.getElementById("output").textContent = "Output cleared";
+      document.getElementById("statusMessage").innerHTML = '';
+    }
+
+    async function submitScore() {
+      const userId = document.getElementById("userId").value;
+      const score = document.getElementById("score").value;
+
+      if (!userId || !score) {
+        showOutput("Please fill in User ID and Score", true);
+        return;
+      }
+
+      showLoading();
+
+      try {
+        const res = await fetch(`${API_BASE}/submit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: Number(userId),
+            score: Number(score)
+          })
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+
+        const data = await res.json();
+        showOutput(data);
+      } catch (error) {
+        showOutput(`${error.message}`, true);
+      }
+    }
+
+    async function getTop() {
+      showLoading();
+
+      try {
+        const res = await fetch(`${API_BASE}/top`);
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+
+        const data = await res.json();
+        showOutput(data);
+      } catch (error) {
+        showOutput(`${error.message}`, true);
+      }
+    }
+
+    async function getRank() {
+      const userId = document.getElementById("rankUserId").value;
+
+      if (!userId) {
+        showOutput("Please enter User ID", true);
+        return;
+      }
+
+      showLoading();
+
+      try {
+        const res = await fetch(`${API_BASE}/rank/${userId}`);
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+
+        const data = await res.json();
+        showOutput(data);
+      } catch (error) {
+        showOutput(`${error.message}`, true);
+      }
+    }
+
+    async function testConnection() {
+      showLoading();
+
+      try {
+        const res = await fetch(`${API_BASE}/top`);
+
+        if (res.ok) {
+          showOutput({
+            status: "Connected",
+            message: "Backend is reachable",
+            endpoint: API_BASE
+          });
+        } else {
+          throw new Error(`Server returned ${res.status}`);
+        }
+      } catch (error) {
+        showOutput(
+          `Connection failed: ${error.message}\n\nMake sure:\n1. Backend is running on port 8081\n2. CORS is enabled in backend`,
+          true
+        );
+      }
+    }
+
+    // Test connection on page load
+    window.addEventListener("load", () => {
+      testConnection();
+    });
+  </script>
+</body>
+</html>
+
